@@ -34,10 +34,11 @@ public class Order {
     @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
-    public Order(User user, OrderStatus status, BigDecimal totalAmount) {
+    public Order(User user) {
         this.user = user;
-        this.status = status;
-        this.totalAmount = totalAmount;
+    }
+
+    public Order() {
     }
 
     public Long getId() {
