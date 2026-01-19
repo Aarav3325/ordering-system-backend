@@ -38,6 +38,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiError> handleGeneric(Exception ex) {
+        ex.printStackTrace(); // 👈 ADD THIS
         return buildError("Something went wrong", HttpStatus.INTERNAL_SERVER_ERROR);
     }
 
