@@ -4,6 +4,7 @@ import com.aarav.orderservice.dto.response.CategoryResponse;
 import com.aarav.orderservice.dto.response.MenuItemResponse;
 import com.aarav.orderservice.entity.Category;
 import com.aarav.orderservice.entity.MenuItem;
+import com.aarav.orderservice.exception.BadRequestException;
 import com.aarav.orderservice.repository.CategoryRepository;
 import com.aarav.orderservice.repository.MenuItemRepository;
 import com.aarav.orderservice.service.MenuService;
@@ -39,6 +40,8 @@ public class MenuServiceImpl implements MenuService {
     public Page<MenuItemResponse> getMenuItemByCategory(Long categoryId, Pageable pageable) {
 
         Page<MenuItem> page = menuItemRepository.findByCategoryIdAndAvailableTrue(categoryId, pageable);
+
+        if(page.isEmpty()) throw new BadRequestException("Invalid Category");
 
         return page.map(
                 item -> new MenuItemResponse(

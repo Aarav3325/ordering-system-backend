@@ -10,6 +10,7 @@ import com.aarav.orderservice.exception.BadRequestException;
 import com.aarav.orderservice.exception.UnauthorizedException;
 import com.aarav.orderservice.repository.RefreshTokenRepository;
 import com.aarav.orderservice.repository.UserRepository;
+import com.aarav.orderservice.security.GoogleTokenVerifier;
 import com.aarav.orderservice.security.JwtUtil;
 import com.aarav.orderservice.service.AuthService;
 import lombok.RequiredArgsConstructor;
@@ -27,12 +28,14 @@ public class AuthServiceImpl implements AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final JwtUtil jwtUtil;
     private final PasswordEncoder passwordEncoder;
+    private final GoogleTokenVerifier googleTokenVerifier;
 
-    public AuthServiceImpl(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder) {
+    public AuthServiceImpl(UserRepository userRepository, RefreshTokenRepository refreshTokenRepository, JwtUtil jwtUtil, PasswordEncoder passwordEncoder, GoogleTokenVerifier googleTokenVerifier) {
         this.userRepository = userRepository;
         this.refreshTokenRepository = refreshTokenRepository;
         this.jwtUtil = jwtUtil;
         this.passwordEncoder = passwordEncoder;
+        this.googleTokenVerifier = googleTokenVerifier;
     }
 
     @Override
@@ -90,6 +93,25 @@ public class AuthServiceImpl implements AuthService {
         return new AuthResponse(accessToken, refreshToken);
     }
 
+    @Override
+    public AuthResponse loginWithGoogle(String idToken) {
+        var payload = googleTokenVerifier.verify(idToken);
+
+        String email = payload.getEmail();
+        String name = (String) payload.get("name");
+
+        User user = userRepository.findByEmail(email)
+                .orElseGet(
+                        () -> createGoogleUser(email, name)
+                );
+
+        if(!user.isEnabled()) {
+            throw new RuntimeException("User is disabled");
+        }
+
+        return generateToken(user);
+    }
+
     public AuthResponse generateToken(User user) {
         String accessToken = jwtUtil.generateToken(
                 user.getEmail(),
@@ -105,5 +127,18 @@ public class AuthServiceImpl implements AuthService {
         refreshTokenRepository.save(refreshToken);
 
         return new AuthResponse(accessToken, refreshToken.getToken());
+    }
+
+    private User createGoogleUser(String email, String name) {
+        User user = new User(
+                email,
+                "",
+                name,
+                Role.USER,
+                true,
+                "GOOGLE"
+        );
+
+        return userRepository.save(user);
     }
 }

@@ -1,5 +1,6 @@
 package com.aarav.orderservice.controller;
 
+import com.aarav.orderservice.dto.request.GoogleLoginRequest;
 import com.aarav.orderservice.dto.request.LoginRequest;
 import com.aarav.orderservice.dto.request.RefreshTokenRequest;
 import com.aarav.orderservice.dto.request.SignUpRequest;
@@ -38,6 +39,14 @@ public class AuthController {
     public ResponseEntity<AuthResponse> login(@Valid @RequestBody RefreshTokenRequest request) {
         AuthResponse response = authService.refreshToken(request.getRefreshToken());
 
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/google")
+    public ResponseEntity<AuthResponse> googleLogin(
+            @Valid @RequestBody GoogleLoginRequest request
+    ) {
+        AuthResponse response = authService.loginWithGoogle(request.getIdToken());
         return ResponseEntity.ok(response);
     }
 
