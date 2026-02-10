@@ -4,12 +4,15 @@ import com.aarav.orderservice.dto.request.PlaceOrderRequest;
 import com.aarav.orderservice.dto.response.MenuItemResponse;
 import com.aarav.orderservice.dto.response.OrderItemResponse;
 import com.aarav.orderservice.dto.response.OrderResponse;
+import com.aarav.orderservice.dto.response.OrderStatusUpdatesResponse;
+import com.aarav.orderservice.entity.OrderStatus;
 import com.aarav.orderservice.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
 
 @RestController
 @RequestMapping("/orders")
@@ -24,6 +27,11 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<OrderResponse> placeOrder(@Valid @RequestBody PlaceOrderRequest placeOrderRequest) {
         return ResponseEntity.ok(orderService.placeOrder(placeOrderRequest));
+    }
+
+    @PatchMapping("/{orderId}/status")
+    public void updateOrderStatus(@PathVariable Long orderId, @RequestParam OrderStatus status) {
+        orderService.updateOrderStatus(orderId, status);
     }
 
     @GetMapping("/my")

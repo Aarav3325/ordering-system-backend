@@ -3,6 +3,7 @@ package com.aarav.orderservice.service.impl;
 import com.aarav.orderservice.dto.request.PlaceOrderRequest;
 import com.aarav.orderservice.dto.response.OrderItemResponse;
 import com.aarav.orderservice.dto.response.OrderResponse;
+import com.aarav.orderservice.dto.response.OrderStatusUpdatesResponse;
 import com.aarav.orderservice.entity.*;
 import com.aarav.orderservice.exception.BadRequestException;
 import com.aarav.orderservice.exception.ResourceNotFoundException;
@@ -13,6 +14,7 @@ import com.aarav.orderservice.security.SecurityUtil;
 import com.aarav.orderservice.service.OrderService;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
@@ -25,11 +27,18 @@ public class OrderServiceImpl implements OrderService {
     private final OrderRepository orderRepository;
     private final MenuItemRepository menuItemRepository;
     private final SecurityUtil securityUtil;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    public OrderServiceImpl(OrderRepository orderRepository, MenuItemRepository menuItemRepository, SecurityUtil securityUtil) {
+    public OrderServiceImpl(
+            OrderRepository orderRepository,
+            MenuItemRepository menuItemRepository,
+            SecurityUtil securityUtil,
+            SimpMessagingTemplate messagingTemplate
+    ) {
         this.orderRepository = orderRepository;
         this.menuItemRepository = menuItemRepository;
         this.securityUtil = securityUtil;
+        this.messagingTemplate = messagingTemplate;
     }
 
     @Override
@@ -43,13 +52,13 @@ public class OrderServiceImpl implements OrderService {
         List<OrderItem> orderItemList = new ArrayList<>();
         BigDecimal totalAmount = BigDecimal.ZERO;
 
-        for(PlaceOrderRequest.OrderItemRequest itemRequest: request.getOrderItems()) {
+        for (PlaceOrderRequest.OrderItemRequest itemRequest : request.getOrderItems()) {
             MenuItem menuItem = menuItemRepository.findById(itemRequest.getMenuItemId())
                     .orElseThrow(
                             () -> new ResourceNotFoundException("Menu item not found")
                     );
 
-            if(!menuItem.isAvailable()) {
+            if (!menuItem.isAvailable()) {
                 throw new BadRequestException("Menu item not available");
             }
 
@@ -107,4 +116,24 @@ public class OrderServiceImpl implements OrderService {
                 items
         );
     }
+
+    @Override
+    public void updateOrderStatus(Long orderId, OrderStatus status) {
+
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+
+        order.setStatus(status);
+
+        Order savedOrder = orderRepository.save(order);
+
+        messagingTemplate.convertAndSend(
+                "/topic/orders/" + savedOrder.getUser().getId(),
+                new OrderStatusUpdatesResponse(
+                        savedOrder.getId(),
+                        savedOrder.getStatus()
+                )
+        );
+    }
+
 }
